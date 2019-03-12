@@ -1,31 +1,36 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
-const http = require('http');
-const app = express();
+var express = require('express');
+var app = express();
+var port = process.env.PORT || 8000;
+var morgan = require(`morgan`);
+var mongoose = require(`mongoose`);
+var bodyParser = require(`body-parser`);
+var router = express.Router();
+var appRoutes = require(`./app/routes/api`)(router);
+var path = require(`path`);
 
-// API file for interacting with MongoDB
-const api = require('./server/routes/api');
-
-// Parsers
+// Middleware (The order of midware matters)
+app.use(morgan(`dev`));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false}));
+app.use(bodyParser.urlencoded({
+  extended: true
+}));
+app.use(express.static(__dirname + `/public`));
+app.use(`/api`, appRoutes);
 
-// Angular DIST output folder
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// API location
-app.use('/api', api);
-
-// Send all other requests to the Angular app
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist/index.html'));
+mongoose.connect('mongodb://localhost:27017/tutorial', {
+  useNewUrlParser: true
+}, function(err) {
+  if (err) {
+    console.log(`Not connected to the database: ` + err);
+  } else {
+    console.log(`Successfully  connected to MongoDB`);
+  }
 });
 
-//Set Port
-const port = process.env.PORT || '3000';
-app.set('port', port);
+app.get(`*`, function(req, res) {
+  res.sendFile(path.join(__dirname + `/public/app/views/index.html`));
+});
 
-const server = http.createServer(app);
-
-server.listen(port, () => console.log(`Running on localhost:${port}`));
+app.listen(port, function() {
+  console.log(`Running the server on port: ` + port);
+});
